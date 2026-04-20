@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>国际实体清单查询系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/[email protected]/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/[email protected]/css/font-awesome.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: "Microsoft YaHei", sans-serif;
+            background-color: #f8f9fa;
+            min-height: 100vh;
+        }
+        .nav-header {
+            background: linear-gradient(135deg, #165DFF, #0039CB);
+            box-shadow: 0 2px 10px rgba(22, 93, 255, 0.2);
+            padding: 1rem 0;
+            color: white;
+        }
+        .nav-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .nav-tag {
+            font-size: 0.8rem;
+            background: rgba(255,255,255,0.3);
+            padding: 0.2rem 0.5rem;
+            border-radius: 10px;
+            margin-left: 1rem;
+        }
+        .card-custom {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            border: none;
+            transition: all 0.3s ease;
+        }
+        .card-header-custom {
+            background-color: #f5f7ff;
+            border-bottom: 1px solid #e8edff;
+            padding: 1rem 1.5rem;
+            font-weight: 600;
+            color: #165DFF;
+        }
+        .card-body-custom {
+            padding: 1.5rem;
+        }
+        .btn-primary-custom {
+            background: linear-gradient(135deg, #165DFF, #0039CB);
+            border: none;
+            border-radius: 8px;
+            padding: 0.6rem 1.5rem;
+            color:white;
+        }
+        .search-input {
+            border-radius: 8px;
+            padding: 0.8rem 1rem;
+            border: 1px solid #e8edff;
+        }
+        .badge-us { background-color: #165DFF !important; }
+        .badge-jp { background-color: #FF6B6B !important; }
+        .badge-eu { background-color: #00A86B !important; }
+    </style>
+</head>
+<body>
+
+    <div class="nav-header">
+        <div class="container">
+            <div class="nav-title">
+                <i class="fa fa-search"></i> 国际实体清单查询系统
+                <span class="nav-tag">美+日+欧 三数据源</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <div class="card card-custom">
+                    <div class="card-header-custom">
+                        <i class="fa fa-database"></i> 实体清单联合查询
+                    </div>
+                    <div class="card-body-custom">
+                        <div class="mb-3">
+                            <label class="form-label">企业英文 / 中文 / 别名</label>
+                            <input type="text" id="keyword" class="form-control search-input" placeholder="例如：HUAWEI, ZTE, 中天科技">
+                        </div>
+                        <button onclick="doSearch()" class="btn btn-primary-custom w-100">
+                            <i class="fa fa-search"></i> 开始查询
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4 justify-content-center">
+            <div class="col-md-10 col-lg-8">
+                <div id="resultArea" class="mt-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 实体数据（可无限扩展）
+        const entityData = [
+            {
+                "name": "HUAWEI TECHNOLOGIES CO., LTD.",
+                "alt_names": "华为技术有限公司",
+                "source": "US Department of Commerce",
+                "list_type": "Entity List",
+                "country": "CHINA",
+                "data_source": "US"
+            },
+            {
+                "name": "ZTE CORPORATION",
+                "alt_names": "中兴通讯股份有限公司",
+                "source": "US Department of Commerce",
+                "list_type": "Entity List",
+                "country": "CHINA",
+                "data_source": "US"
+            },
+            {
+                "name": "ZHONGTIAN TECHNOLOGIES CO., LTD.",
+                "alt_names": "中天科技",
+                "source": "Japan METI",
+                "list_type": "End User List",
+                "country": "CHINA",
+                "data_source": "JP"
+            },
+            {
+                "name": "SEMICONDUCTOR MANUFACTURING INTERNATIONAL CORPORATION",
+                "alt_names": "中芯国际",
+                "source": "EU FSF",
+                "list_type": "EU Sanction List",
+                "country": "CHINA",
+                "data_source": "EU"
+            }
+        ];
+
+        function standardName(s) {
+            if (!s) return "";
+            return s.toString().toUpperCase().replace(/[^\w\s\u4e00-\u9fff]/g, " ").replace(/\s+/g, " ").trim();
+        }
+
+        function doSearch() {
+            const kw = standardName(document.getElementById("keyword").value);
+            if (!kw) return;
+
+            const results = entityData.filter(item => {
+                const name = standardName(item.name);
+                const alias = standardName(item.alt_names);
+                return name.includes(kw) || alias.includes(kw);
+            });
+
+            let html = "";
+            if (results.length === 0) {
+                html = `<div class="alert alert-success text-center">未查询到相关实体</div>`;
+            } else {
+                results.forEach(r => {
+                    const sourceLabel = {
+                        "US": "美国 CSL",
+                        "JP": "日本 EUL",
+                        "EU": "欧盟 FSF"
+                    }[r.data_source] || "未知";
+
+                    const badgeCls = "badge-" + r.data_source.toLowerCase();
+
+                    html += `
+                    <div class="card card-custom mb-3">
+                        <div class="card-body p-4">
+                            <h5 class="mb-2">${r.name}</h5>
+                            <p><strong>别名：</strong>${r.alt_names}</p>
+                            <span class="badge ${badgeCls} me-2">${sourceLabel}</span>
+                            <span class="badge bg-info me-2">${r.list_type}</span>
+                            <span class="badge bg-secondary">${r.country}</span>
+                        </div>
+                    </div>`;
+                });
+            }
+            document.getElementById("resultArea").innerHTML = html;
+        }
+    </script>
+</body>
+</html>
